@@ -22,19 +22,23 @@ def generate_hw01(question):
         template = f"""
         你是一个节假日查询助手,请按照json的格式回答: {question}
         json内数据包括：Result:[date,name]
+        请确保根据问题提供相关的所有节假日信息。
         """
 
         message_content = template.format(question=question)
 
         message = HumanMessage(
-            content=[
-                {"type": "text", "text": message_content},
-            ]
+            content=message_content
         )
 
         response = llm.invoke([message])
-
-        return response
+        if response:
+            content = response.content.strip()
+            if content.startswith("```") and content.endswith("```"):
+                content = content[3:-3].strip()
+            return content
+        else:
+            return None
 
     except Exception as e:
         print("Exception occurred:", str(e))
@@ -50,6 +54,7 @@ def generate_hw04(question):
     pass
 
 def demo(question):
+    try:
         llm = AzureChatOpenAI(
                 model=gpt_config['model_name'],
                 deployment_name=gpt_config['deployment_name'],
@@ -59,15 +64,16 @@ def demo(question):
                 temperature=gpt_config['temperature']
         )
         message = HumanMessage(
-                content=[
-                    {"type": "text", "text": question},
-                ]
+                content=question
         )
         response = llm.invoke([message])
 
         return response
 
+    except Exception as e:
+        print("Exception occurred:", str(e))
+        traceback.print_exc()
 
 if __name__ == "__main__":
-    result = generate_hw01("2024年台灣10月紀念日有哪些?")
-    print(result.content)
+    result = generate_hw01("2024年台灣地区5月紀念日有哪些?")
+    print(result)
