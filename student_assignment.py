@@ -36,6 +36,8 @@ def generate_hw01(question):
             content = response.content.strip()
             if content.startswith("```") and content.endswith("```"):
                 content = content[3:-3].strip()
+            if content.startswith("json"):
+                content = content[4:].strip()
             return content
         else:
             return None
