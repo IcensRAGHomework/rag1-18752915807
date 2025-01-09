@@ -14,6 +14,7 @@ configurations = {
         "max_token": 4096
     }
 }
+calendarific_api_key = os.getenv('CALENDARIFIC_API_KEY')
 
 def get_model_configuration(model_version):
     return configurations.get(model_version)
