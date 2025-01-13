@@ -17,6 +17,15 @@ gpt_chat_version = 'gpt-4o'
 gpt_config = get_model_configuration(gpt_chat_version)
 calendarific_api_key="s2CdTTbwrTw52sv45dywDsGuCVG8cSK2"
 
+llm = AzureChatOpenAI(
+    model=gpt_config['model_name'],
+    deployment_name=gpt_config['deployment_name'],
+    openai_api_key=gpt_config['api_key'],
+    openai_api_version=gpt_config['api_version'],
+    azure_endpoint=gpt_config['api_base'],
+    temperature=gpt_config['temperature']
+)
+
 def clean_response_content(response):
     content = response.content.strip()
     if content.startswith("```") and content.endswith("```"):
@@ -24,17 +33,9 @@ def clean_response_content(response):
     if content.startswith("json"):
         content = content[4:].strip()
     return content
+
 def generate_hw01(question):
     try:
-        llm = AzureChatOpenAI(
-                model=gpt_config['model_name'],
-                deployment_name=gpt_config['deployment_name'],
-                openai_api_key=gpt_config['api_key'],
-                openai_api_version=gpt_config['api_version'],
-                azure_endpoint=gpt_config['api_base'],
-                temperature=gpt_config['temperature']
-        )
-
         template = """
         你是一个纪念日查询助手,请按照json的格式回答: {question}
         json格式为:
@@ -70,14 +71,6 @@ def generate_hw01(question):
 
 def extract_year_and_month(question):
     try:
-        llm = AzureChatOpenAI(
-            model=gpt_config['model_name'],
-            deployment_name=gpt_config['deployment_name'],
-            openai_api_key=gpt_config['api_key'],
-            openai_api_version=gpt_config['api_version'],
-            azure_endpoint=gpt_config['api_base'],
-            temperature=gpt_config['temperature']
-        )
         template = f"""
         请从以下问题中提取年份和月份，并以json的格式返回year和month
         问题：{question}
@@ -148,22 +141,10 @@ def get_session_history(session_id):
 
 def generate_hw03(question2, question3):
     try:
-        # 获取作业2的回答
         answer2 = generate_hw02(question2)
         if not answer2:
             raise ValueError("Failed to get answer from generate_hw02")
 
-        # 初始化 LLM
-        llm = AzureChatOpenAI(
-            model=gpt_config['model_name'],
-            deployment_name=gpt_config['deployment_name'],
-            openai_api_key=gpt_config['api_key'],
-            openai_api_version=gpt_config['api_version'],
-            azure_endpoint=gpt_config['api_base'],
-            temperature=gpt_config['temperature']
-        )
-
-        # 初始化RunnableWithMessageHistory
         with_message_history = RunnableWithMessageHistory(
             llm,
             get_session_history
@@ -190,7 +171,6 @@ def generate_hw03(question2, question3):
         ]
         response = with_message_history.invoke(input_messages, config={"configurable": {"session_id": "1"}})
 
-        # 返回响应内容
         if response:
             return clean_response_content(response)
         else:
@@ -205,35 +185,12 @@ def generate_hw03(question2, question3):
 def generate_hw04(question):
     pass
 
-def demo(question):
-    try:
-        llm = AzureChatOpenAI(
-                model=gpt_config['model_name'],
-                deployment_name=gpt_config['deployment_name'],
-                openai_api_key=gpt_config['api_key'],
-                openai_api_version=gpt_config['api_version'],
-                azure_endpoint=gpt_config['api_base'],
-                temperature=gpt_config['temperature']
-        )
-        message = HumanMessage(
-                content=question
-        )
-        response = llm.invoke([message])
-
-        return response
-
-    except Exception as e:
-        print("Exception occurred:", str(e))
-        traceback.print_exc()
-
 if __name__ == "__main__":
-    # # 测试 generate_hw01
-    # result = generate_hw01("What are the October anniversarities in Taiwan in 2024?")
-    # print(result)
-    #
-    # # 测试 generate_hw02
-    # result = generate_hw02("2024年台灣地区10月紀念日有哪些?")
-    # print(result)
+    result = generate_hw01("What are the October anniversarities in Taiwan in 2024?")
+    print(result)
+
+    result = generate_hw02("2024年台灣地区10月紀念日有哪些?")
+    print(result)
 
     result = generate_hw03("2024年台灣地区10月紀念日有哪些?", '根據先前的節日清單，這個節日{"date": "10-31", "name": "蔣公誕辰紀念日"}是否有在該月份清單？')
     print(result)
