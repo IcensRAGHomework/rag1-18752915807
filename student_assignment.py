@@ -87,7 +87,6 @@ def extract_year_and_month(question):
 
         if response:
             content = response.content.strip()
-            print(f"Response content:\n{content}")
 
             year_match = re.search(r'"year":\s*(\d+)', content, re.IGNORECASE)
             month_match = re.search(r'"month":\s*(\d+)', content, re.IGNORECASE)
@@ -138,17 +137,21 @@ def generate_hw02(question):
 
 def generate_hw03(question2, question3):
     try:
+        # 获取作业2的回答
         answer2 = generate_hw02(question2)
         if not answer2:
             raise ValueError("Failed to get answer from generate_hw02")
 
         holidays = json.loads(answer2)["Result"]
 
-        holiday_to_check = json.loads(question3)
-        date_to_check = holiday_to_check["date"]
-        name_to_check = holiday_to_check["name"]
+        match = re.search(r'\{"date":\s*"(\d{2}-\d{2})",\s*"name":\s*"([^"]+)"\}', question3)
+        if not match:
+            raise ValueError("Failed to parse holiday from question3")
 
-        exists = any(h["date"].endswith(date_to_check) and h["name"] == name_to_check for h in holidays)
+        date_to_check, name_to_check = match.groups()
+
+        # 检查节日是否存在
+        exists = any(h["date"][5:] == date_to_check and h["name"] == name_to_check for h in holidays)
 
         response = {
             "add": not exists,
@@ -187,13 +190,13 @@ def demo(question):
         traceback.print_exc()
 
 if __name__ == "__main__":
-    # 测试 generate_hw01
-    result = generate_hw01("What are the October anniversarities in Taiwan in 2024?")
-    print(result)
+    # # 测试 generate_hw01
+    # result = generate_hw01("What are the October anniversarities in Taiwan in 2024?")
+    # print(result)
+    #
+    # # 测试 generate_hw02
+    # result = generate_hw02("2024年台灣地区10月紀念日有哪些?")
+    # print(result)
 
-    # 测试 generate_hw02
-    result = generate_hw02("2024年台灣地区10月紀念日有哪些?")
-    print(result)
-
-    result = generate_hw03("2024年台灣地区10月紀念日有哪些?", '{"date": "10-31", "name": "蔣公誕辰紀念日"}')
+    result = generate_hw03("2024年台灣地区10月紀念日有哪些?", '根據先前的節日清單，這個節日{"date": "10-31", "name": "蔣公誕辰紀念日"}是否有在該月份清單？')
     print(result)
