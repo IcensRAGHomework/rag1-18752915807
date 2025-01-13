@@ -1,14 +1,14 @@
 import base64
 import json
-import os
 import re
 import traceback
+from mimetypes import guess_type
+
 import requests as standard_requests
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_openai import AzureChatOpenAI
-from mimetypes import guess_type
 
 from model_configurations import get_model_configuration
 
@@ -24,6 +24,8 @@ llm = AzureChatOpenAI(
     azure_endpoint=gpt_config['api_base'],
     temperature=gpt_config['temperature']
 )
+store = {}
+
 
 def clean_response_content(response):
     content = response.content.strip()
@@ -32,6 +34,51 @@ def clean_response_content(response):
     if content.startswith("json"):
         content = content[4:].strip()
     return content
+
+def extract_year_and_month(question):
+    try:
+        template = f"""
+        请从以下问题中提取年份和月份，并以json的格式返回year和month
+        问题：{question}
+        """
+
+        message = HumanMessage(content=template)
+        response = llm.invoke([message])
+
+
+        if response:
+            content = response.content.strip()
+
+            year_match = re.search(r'"year":\s*(\d+)', content, re.IGNORECASE)
+            month_match = re.search(r'"month":\s*(\d+)', content, re.IGNORECASE)
+            if year_match and month_match:
+                year = year_match.group(1)
+                month = month_match.group(1)
+                return year, month
+            else:
+                return None, None
+        else:
+            return None, None
+
+    except Exception as e:
+        print("Exception occurred:", str(e))
+        traceback.print_exc()
+        return None, None
+
+def get_session_history(session_id):
+    if session_id not in store:
+        store[session_id] = ChatMessageHistory()
+    return store[session_id]
+
+def local_image_to_data_url(image_path):
+    mime_type, _ = guess_type(image_path)
+    if mime_type is None:
+        mime_type = 'application/octet-stream'
+
+    with open(image_path, "rb") as image_file:
+        base64_encoded_data = base64.b64encode(image_file.read()).decode('utf-8')
+
+    return f"data:{mime_type};base64,{base64_encoded_data}"
 
 def generate_hw01(question):
     try:
@@ -66,36 +113,6 @@ def generate_hw01(question):
         print("Exception occurred:", str(e))
         traceback.print_exc()
 
-def extract_year_and_month(question):
-    try:
-        template = f"""
-        请从以下问题中提取年份和月份，并以json的格式返回year和month
-        问题：{question}
-        """
-
-        message = HumanMessage(content=template)
-        response = llm.invoke([message])
-
-
-        if response:
-            content = response.content.strip()
-
-            year_match = re.search(r'"year":\s*(\d+)', content, re.IGNORECASE)
-            month_match = re.search(r'"month":\s*(\d+)', content, re.IGNORECASE)
-            if year_match and month_match:
-                year = year_match.group(1)
-                month = month_match.group(1)
-                return year, month
-            else:
-                return None, None
-        else:
-            return None, None
-
-    except Exception as e:
-        print("Exception occurred:", str(e))
-        traceback.print_exc()
-        return None, None
-
 def generate_hw02(question):
     try:
         year, month = extract_year_and_month(question)
@@ -126,13 +143,6 @@ def generate_hw02(question):
         print("Exception occurred:", str(e))
         traceback.print_exc()
         return None
-
-store = {}
-
-def get_session_history(session_id):
-    if session_id not in store:
-        store[session_id] = ChatMessageHistory()
-    return store[session_id]
 
 def generate_hw03(question2, question3):
     try:
@@ -175,16 +185,6 @@ def generate_hw03(question2, question3):
         traceback.print_exc()
         return None
 
-def local_image_to_data_url(image_path):
-    mime_type, _ = guess_type(image_path)
-    if mime_type is None:
-        mime_type = 'application/octet-stream'
-
-    with open(image_path, "rb") as image_file:
-        base64_encoded_data = base64.b64encode(image_file.read()).decode('utf-8')
-
-    return f"data:{mime_type};base64,{base64_encoded_data}"
-
 def generate_hw04(question):
     try:
         data_url = local_image_to_data_url('baseball.png')
@@ -218,16 +218,16 @@ def generate_hw04(question):
         traceback.print_exc()
         return None
 
-if __name__ == "__main__":
-    # result = generate_hw01("What are the October anniversaries in Taiwan in 2024?")
-    # print(result)
-    #
-    # result = generate_hw02("2024年台灣地区10月紀念日有哪些?")
-    # print(result)
-    #
-    # result = generate_hw03("2024年台灣地区10月紀念日有哪些?",
-    #                        '根據先前的節日清單，這個節日{"date": "10-31", "name": "蔣公誕辰紀念日"}是否有在該月份清單？')
-    # print(result)
-    #
-    result = generate_hw04("請問第3名的积分是多少?")
-    print(result)
+# if __name__ == "__main__":
+#     result = generate_hw01("What are the October anniversaries in Taiwan in 2024?")
+#     print(result)
+#
+#     result = generate_hw02("2024年台灣地区10月紀念日有哪些?")
+#     print(result)
+#
+#     result = generate_hw03("2024年台灣地区10月紀念日有哪些?",
+#                            '根據先前的節日清單，這個節日{"date": "10-31", "name": "蔣公誕辰紀念日"}是否有在該月份清單？')
+#     print(result)
+#
+#     result = generate_hw04("請問第1名是哪个队伍?")
+#     print(result)
