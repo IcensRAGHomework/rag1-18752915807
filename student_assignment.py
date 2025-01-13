@@ -184,7 +184,7 @@ def image_file_to_base64(image_path: str):
 def generate_hw04(question):
     pass
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
     # result = generate_hw01("What are the October anniversaries in Taiwan in 2024?")
     # print(result)
     #
