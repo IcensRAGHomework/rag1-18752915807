@@ -7,12 +7,13 @@ import traceback
 from langchain import requests as langchain_requests
 from langchain_core.utils import print_text
 
-from model_configurations import get_model_configuration, calendarific_api_key
+from model_configurations import get_model_configuration
 from langchain_openai import AzureChatOpenAI
 from langchain_core.messages import HumanMessage
 
 gpt_chat_version = 'gpt-4o'
 gpt_config = get_model_configuration(gpt_chat_version)
+calendarific_api_key="s2CdTTbwrTw52sv45dywDsGuCVG8cSK2"
 
 def generate_hw01(question):
     try:
@@ -24,7 +25,7 @@ def generate_hw01(question):
                 azure_endpoint=gpt_config['api_base'],
                 temperature=gpt_config['temperature']
         )
-        # 定义模板字符串
+
         template = """
         你是一个纪念日查询助手,请按照json的格式回答: {question}
         json格式为:
@@ -110,7 +111,6 @@ def generate_hw02(question):
         if not year or not month:
             raise ValueError("Failed to extract year and month from the question")
 
-        # 调用 Calendarific API
         url = f"https://calendarific.com/api/v2/holidays?api_key={calendarific_api_key}&country=TW&year={year}&month={month}"
         response = standard_requests.get(url)
         if response.status_code != 200:
@@ -129,7 +129,7 @@ def generate_hw02(question):
         output = {
             "Result": result
         }
-        return json.dumps(output, ensure_ascii=False)
+        return output
 
     except Exception as e:
         print("Exception occurred:", str(e))
