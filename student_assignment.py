@@ -129,7 +129,7 @@ def generate_hw02(question):
         output = {
             "Result": result
         }
-        return output
+        return json.dumps(output, ensure_ascii=False)
 
     except Exception as e:
         print("Exception occurred:", str(e))
