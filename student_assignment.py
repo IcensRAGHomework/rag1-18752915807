@@ -137,33 +137,33 @@ def generate_hw02(question):
 
 def generate_hw03(question2, question3):
     try:
-        # 获取作业2的回答
         answer2 = generate_hw02(question2)
         if not answer2:
             raise ValueError("Failed to get answer from generate_hw02")
 
         holidays = json.loads(answer2)["Result"]
 
-        match = re.search(r'\{"date":\s*"(\d{2}-\d{2})",\s*"name":\s*"([^"]+)"\}', question3)
+        match = re.search(r'\{"date":\s*"(\d{2}-\d{2})",\s*"name":\s*"([^"]+)"}', question3)
         if not match:
             raise ValueError("Failed to parse holiday from question3")
 
         date_to_check, name_to_check = match.groups()
 
-        # 检查节日是否存在
         exists = any(h["date"][5:] == date_to_check and h["name"] == name_to_check for h in holidays)
 
         response = {
-            "add": not exists,
-            "reason": f"The holiday {name_to_check} on {date_to_check} is {'already' if exists else 'not'} in the list. Current list: {holidays}"
+            "Result": {
+                "add": not exists,
+                "reason": f"The holiday {name_to_check} on {date_to_check} is {'already' if exists else 'not'} in the list. Current list: {holidays}"
+            }
         }
 
         return json.dumps(response, ensure_ascii=False)
-
     except Exception as e:
         print("Exception occurred:", str(e))
         traceback.print_exc()
         return None
+
 
 def generate_hw04(question):
     pass
