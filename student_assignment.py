@@ -174,12 +174,10 @@ def generate_hw03(question2, question3):
         你是一个纪念日查询助手,请按照json的格式回答: {question3}
         json格式为:
         {{
-           "Result": [
-                {{
-                    "add": true or false，
-                    "reason": "reason"
-                }}
-            ]
+           "Result": {{
+                "add": true or false,
+                "reason": "reason"
+            }}
         }}
         add : 這是一個布林值，表示是否需要將節日新增到節日清單中。根據問題判斷該節日是否存在於清單中，如果不存在，則為 true；否則為 false。
         reason : 描述為什麼需要或不需要新增節日，具體說明是否該節日已經存在於清單中，以及當前清單的內容。
