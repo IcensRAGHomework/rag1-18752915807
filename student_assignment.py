@@ -137,7 +137,30 @@ def generate_hw02(question):
         return None
 
 def generate_hw03(question2, question3):
-    pass
+    try:
+        answer2 = generate_hw02(question2)
+        if not answer2:
+            raise ValueError("Failed to get answer from generate_hw02")
+
+        holidays = json.loads(answer2)["Result"]
+
+        holiday_to_check = json.loads(question3)
+        date_to_check = holiday_to_check["date"]
+        name_to_check = holiday_to_check["name"]
+
+        exists = any(h["date"].endswith(date_to_check) and h["name"] == name_to_check for h in holidays)
+
+        response = {
+            "add": not exists,
+            "reason": f"The holiday {name_to_check} on {date_to_check} is {'already' if exists else 'not'} in the list. Current list: {holidays}"
+        }
+
+        return json.dumps(response, ensure_ascii=False)
+
+    except Exception as e:
+        print("Exception occurred:", str(e))
+        traceback.print_exc()
+        return None
 
 def generate_hw04(question):
     pass
@@ -170,4 +193,7 @@ if __name__ == "__main__":
 
     # 测试 generate_hw02
     result = generate_hw02("2024年台灣地区10月紀念日有哪些?")
+    print(result)
+
+    result = generate_hw03("2024年台灣地区10月紀念日有哪些?", '{"date": "10-31", "name": "蔣公誕辰紀念日"}')
     print(result)
