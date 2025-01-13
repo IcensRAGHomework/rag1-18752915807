@@ -10,11 +10,20 @@ from langchain_core.utils import print_text
 from model_configurations import get_model_configuration
 from langchain_openai import AzureChatOpenAI
 from langchain_core.messages import HumanMessage
+from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_community.chat_message_histories import ChatMessageHistory
 
 gpt_chat_version = 'gpt-4o'
 gpt_config = get_model_configuration(gpt_chat_version)
 calendarific_api_key="s2CdTTbwrTw52sv45dywDsGuCVG8cSK2"
 
+def clean_response_content(response):
+    content = response.content.strip()
+    if content.startswith("```") and content.endswith("```"):
+        content = content[3:-3].strip()
+    if content.startswith("json"):
+        content = content[4:].strip()
+    return content
 def generate_hw01(question):
     try:
         llm = AzureChatOpenAI(
@@ -51,12 +60,7 @@ def generate_hw01(question):
 
         response = llm.invoke([message])
         if response:
-            content = response.content.strip()
-            if content.startswith("```") and content.endswith("```"):
-                content = content[3:-3].strip()
-            if content.startswith("json"):
-                content = content[4:].strip()
-            return content
+            return clean_response_content(response)
         else:
             return None
 
@@ -135,30 +139,65 @@ def generate_hw02(question):
         traceback.print_exc()
         return None
 
+store = {}
+
+def get_session_history(session_id):
+    if session_id not in store:
+        store[session_id] = ChatMessageHistory()
+    return store[session_id]
+
 def generate_hw03(question2, question3):
     try:
+        # 获取作业2的回答
         answer2 = generate_hw02(question2)
         if not answer2:
             raise ValueError("Failed to get answer from generate_hw02")
 
-        holidays = json.loads(answer2)["Result"]
+        # 初始化 LLM
+        llm = AzureChatOpenAI(
+            model=gpt_config['model_name'],
+            deployment_name=gpt_config['deployment_name'],
+            openai_api_key=gpt_config['api_key'],
+            openai_api_version=gpt_config['api_version'],
+            azure_endpoint=gpt_config['api_base'],
+            temperature=gpt_config['temperature']
+        )
 
-        match = re.search(r'\{"date":\s*"(\d{2}-\d{2})",\s*"name":\s*"([^"]+)"}', question3)
-        if not match:
-            raise ValueError("Failed to parse holiday from question3")
+        # 初始化RunnableWithMessageHistory
+        with_message_history = RunnableWithMessageHistory(
+            llm,
+            get_session_history
+        )
 
-        date_to_check, name_to_check = match.groups()
+        # 配置输入和历史消息
+        template = """
+        你是一个纪念日查询助手,请按照json的格式回答: {question3}
+        json格式为:
+        {{
+           "Result": [
+                {{
+                    "add": true or false，
+                    "reason": "reason"
+                }}
+            ]
+        }}
+        add : 這是一個布林值，表示是否需要將節日新增到節日清單中。根據問題判斷該節日是否存在於清單中，如果不存在，則為 true；否則為 false。
+        reason : 描述為什麼需要或不需要新增節日，具體說明是否該節日已經存在於清單中，以及當前清單的內容。
+        """
+        message_content = template.format(question3=question3)
+        input_messages = [
+            HumanMessage(content=question2),
+            HumanMessage(content=answer2),
+            HumanMessage(content=message_content)
+        ]
+        response = with_message_history.invoke(input_messages, config={"configurable": {"session_id": "1"}})
 
-        exists = any(h["date"][5:] == date_to_check and h["name"] == name_to_check for h in holidays)
+        # 返回响应内容
+        if response:
+            return clean_response_content(response)
+        else:
+            return None
 
-        response = {
-            "Result": {
-                "add": not exists,
-                "reason": f"The holiday {name_to_check} on {date_to_check} is {'already' if exists else 'not'} in the list. Current list: {holidays}"
-            }
-        }
-
-        return json.dumps(response, ensure_ascii=False)
     except Exception as e:
         print("Exception occurred:", str(e))
         traceback.print_exc()
