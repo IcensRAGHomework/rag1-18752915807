@@ -1,17 +1,18 @@
+import base64
 import json
 import re
-
-import requests as standard_requests
 import traceback
+from io import BytesIO
 
-from langchain import requests as langchain_requests
-from langchain_core.utils import print_text
-
-from model_configurations import get_model_configuration
-from langchain_openai import AzureChatOpenAI
+import pytesseract
+import requests as standard_requests
+from PIL import Image
+from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables.history import RunnableWithMessageHistory
-from langchain_community.chat_message_histories import ChatMessageHistory
+from langchain_openai import AzureChatOpenAI
+
+from model_configurations import get_model_configuration
 
 gpt_chat_version = 'gpt-4o'
 gpt_config = get_model_configuration(gpt_chat_version)
@@ -36,7 +37,7 @@ def clean_response_content(response):
 
 def generate_hw01(question):
     try:
-        template = """
+        template = f"""
         你是一个纪念日查询助手,请按照json的格式回答: {question}
         json格式为:
         {{
@@ -55,9 +56,7 @@ def generate_hw01(question):
         请确保根据问题提供相关的所有纪念日信息,并根据输入语言返回相同的语言。
         """
 
-        message_content = template.format(question=question)
-
-        message = HumanMessage(content=message_content)
+        message = HumanMessage(content=template)
 
         response = llm.invoke([message])
         if response:
@@ -76,9 +75,7 @@ def extract_year_and_month(question):
         问题：{question}
         """
 
-        message_content = template
-
-        message = HumanMessage(content=message_content)
+        message = HumanMessage(content=template)
         response = llm.invoke([message])
 
 
@@ -115,15 +112,15 @@ def generate_hw02(question):
         data = response.json()
 
         holidays = data.get('response', {}).get('holidays', [])
-        result = []
+        output = []
         for holiday in holidays:
-            result.append({
+            output.append({
                 "date": holiday.get('date', {}).get('iso'),
                 "name": holiday.get('name')
             })
 
         output = {
-            "Result": result
+            "Result": output
         }
         return json.dumps(output, ensure_ascii=False)
 
@@ -151,7 +148,7 @@ def generate_hw03(question2, question3):
         )
 
         # 配置输入和历史消息
-        template = """
+        template = f"""
         你是一个纪念日查询助手,请按照json的格式回答: {question3}
         json格式为:
         {{
@@ -163,11 +160,10 @@ def generate_hw03(question2, question3):
         add : 這是一個布林值，表示是否需要將節日新增到節日清單中。根據問題判斷該節日是否存在於清單中，如果不存在，則為 true；否則為 false。
         reason : 描述為什麼需要或不需要新增節日，具體說明是否該節日已經存在於清單中，以及當前清單的內容。
         """
-        message_content = template.format(question3=question3)
         input_messages = [
             HumanMessage(content=question2),
             HumanMessage(content=answer2),
-            HumanMessage(content=message_content)
+            HumanMessage(content=template)
         ]
         response = with_message_history.invoke(input_messages, config={"configurable": {"session_id": "1"}})
 
@@ -181,16 +177,50 @@ def generate_hw03(question2, question3):
         traceback.print_exc()
         return None
 
+def image_file_to_base64(image_path: str):
+    with open(image_path, "rb") as image_file:
+        data_str = base64.b64encode(image_file.read()).decode("utf-8")
+    image_type = image_path.split(".")[-1].lower()
+    prefix = f"data:image/{image_type};base64,"
+    return f"{prefix}{data_str}"
 
 def generate_hw04(question):
-    pass
+    try:
+        image = Image.open('baseball.png')
+        text = pytesseract.image_to_string(image, lang='eng')
+        print(f"Extracted text:\n{text}")
+
+        message_content = f"""
+        你是一个图片内容解析助手。以下是从图片提取的文本内容，请回答与该图片内容相关的问题：
+        {text}
+        问题：{question}
+        """
+
+        message = HumanMessage(content=message_content)
+
+        response = llm.invoke([message])
+
+        # 返回响应内容
+        if response:
+            return clean_response_content(response)
+        else:
+            return None
+
+    except Exception as e:
+        print("Exception occurred:", str(e))
+        traceback.print_exc()
+        return None
 
 if __name__ == "__main__":
-    result = generate_hw01("What are the October anniversarities in Taiwan in 2024?")
-    print(result)
+    # result = generate_hw01("What are the October anniversaries in Taiwan in 2024?")
+    # print(result)
+    # #
+    # result = generate_hw02("2024年台灣地区10月紀念日有哪些?")
+    # print(result)
+    #
+    # result = generate_hw03("2024年台灣地区10月紀念日有哪些?",
+    #                        '根據先前的節日清單，這個節日{"date": "10-31", "name": "蔣公誕辰紀念日"}是否有在該月份清單？')
+    # print(result)
 
-    result = generate_hw02("2024年台灣地区10月紀念日有哪些?")
-    print(result)
-
-    result = generate_hw03("2024年台灣地区10月紀念日有哪些?", '根據先前的節日清單，這個節日{"date": "10-31", "name": "蔣公誕辰紀念日"}是否有在該月份清單？')
+    result = generate_hw04("請問中華台北的積分是多少?")
     print(result)
