@@ -2,11 +2,8 @@ import base64
 import json
 import re
 import traceback
-from io import BytesIO
 
-import pytesseract
 import requests as standard_requests
-from PIL import Image
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables.history import RunnableWithMessageHistory
@@ -185,42 +182,18 @@ def image_file_to_base64(image_path: str):
     return f"{prefix}{data_str}"
 
 def generate_hw04(question):
-    try:
-        image = Image.open('baseball.png')
-        text = pytesseract.image_to_string(image, lang='eng')
-        print(f"Extracted text:\n{text}")
-
-        message_content = f"""
-        你是一个图片内容解析助手。以下是从图片提取的文本内容，请回答与该图片内容相关的问题：
-        {text}
-        问题：{question}
-        """
-
-        message = HumanMessage(content=message_content)
-
-        response = llm.invoke([message])
-
-        # 返回响应内容
-        if response:
-            return clean_response_content(response)
-        else:
-            return None
-
-    except Exception as e:
-        print("Exception occurred:", str(e))
-        traceback.print_exc()
-        return None
+    pass
 
 if __name__ == "__main__":
     # result = generate_hw01("What are the October anniversaries in Taiwan in 2024?")
     # print(result)
-    # #
+    #
     # result = generate_hw02("2024年台灣地区10月紀念日有哪些?")
     # print(result)
     #
     # result = generate_hw03("2024年台灣地区10月紀念日有哪些?",
     #                        '根據先前的節日清單，這個節日{"date": "10-31", "name": "蔣公誕辰紀念日"}是否有在該月份清單？')
     # print(result)
-
-    result = generate_hw04("請問中華台北的積分是多少?")
-    print(result)
+    #
+    # result = generate_hw04("請問中華台北的積分是多少?")
+    # print(result)
