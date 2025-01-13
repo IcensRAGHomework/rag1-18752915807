@@ -1,13 +1,14 @@
 import base64
 import json
+import os
 import re
 import traceback
-
 import requests as standard_requests
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_openai import AzureChatOpenAI
+from mimetypes import guess_type
 
 from model_configurations import get_model_configuration
 
@@ -174,17 +175,50 @@ def generate_hw03(question2, question3):
         traceback.print_exc()
         return None
 
-def image_file_to_base64(image_path: str):
+def local_image_to_data_url(image_path):
+    mime_type, _ = guess_type(image_path)
+    if mime_type is None:
+        mime_type = 'application/octet-stream'
+
     with open(image_path, "rb") as image_file:
-        data_str = base64.b64encode(image_file.read()).decode("utf-8")
-    image_type = image_path.split(".")[-1].lower()
-    prefix = f"data:image/{image_type};base64,"
-    return f"{prefix}{data_str}"
+        base64_encoded_data = base64.b64encode(image_file.read()).decode('utf-8')
+
+    return f"data:{mime_type};base64,{base64_encoded_data}"
 
 def generate_hw04(question):
-    pass
+    try:
+        data_url = local_image_to_data_url('baseball.png')
 
-# if __name__ == "__main__":
+        content = [
+            {"role": "user", "content":
+                [
+                    {"type": "text", "text": f'''你需要根据图片内容回答问题{question}，并将结果按照json格式输出：
+                     json格式如下：
+                     {{
+                        "Result": 
+                            {{
+                                "value":value
+                            }}
+                    }}
+                    其中value可以是score,team,Alliance,rank,根据问题不同使用不同的value
+                    '''
+                    },
+                    {"type": "image_url", "image_url": {"url": data_url}},
+                ]
+             }
+        ]
+        response = llm.invoke(content)
+        if response:
+            return clean_response_content(response)
+        else:
+            return None
+
+    except Exception as e:
+        print("Exception occurred:", str(e))
+        traceback.print_exc()
+        return None
+
+if __name__ == "__main__":
     # result = generate_hw01("What are the October anniversaries in Taiwan in 2024?")
     # print(result)
     #
@@ -195,5 +229,5 @@ def generate_hw04(question):
     #                        '根據先前的節日清單，這個節日{"date": "10-31", "name": "蔣公誕辰紀念日"}是否有在該月份清單？')
     # print(result)
     #
-    # result = generate_hw04("請問中華台北的積分是多少?")
-    # print(result)
+    result = generate_hw04("請問第3名的积分是多少?")
+    print(result)
